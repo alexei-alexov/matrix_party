@@ -17,6 +17,34 @@ class MatrixParty(object):
     v = 3
     N = 51
 
+    def getElement(self, m1, m2, row, column):
+        result = 0
+        for i in xrange(len(m1)):
+            result += m1[row][i]*m2[i][column]
+
+        return result
+
+    def matrix_mult(self, m1, m2):
+        """
+        This method multiply two same sized square matrices
+        """
+        length = len(m1)
+        return [[self.getElement(m1, m2, row, column)
+                 for column in xrange(length)] for row in xrange(length)]
+
+    def vector_mult(self, m, v):
+        """
+        This method multiply matrix on vector
+        """
+        result = []
+        length = len(m)
+        for row in xrange(length):
+            row_result = 0
+            for column in xrange(length):
+                row_result += m[row][column]*v[column][0]
+            result.append([row_result])
+        return result
+
     def generate_array(self, size):
         """
         Generate square array filled with 0
@@ -41,9 +69,9 @@ class MatrixParty(object):
 
          - OK
         """
-        result = np.array([1 if i == j else 0 for j in xrange(self.c+1)])
+        result = [1 if i == j else 0 for j in xrange(self.c+1)]
         print "GENERATION E: ", result
-        return result.T
+        return result
 
     def get_fii(self, j, i):
         return self.l + i * self.m + j * self.v
@@ -75,25 +103,26 @@ class MatrixParty(object):
 
          - OK
         """
-        print "GET F CALLED. J:", j
         # creating array filled with 0
         f = self.generate_array(self.c+1)
 
         f[0][0] = self.l + j * self.v
         f[self.c][self.c] = self.l + self.c * self.m
-        f[0][1] = -self.m
+        f[self.c-1][self.c-2] = -1 * self.l
         f[self.c][self.c-1] = -(self.l + j * self.v)
+        f[0][1] = -1 * self.m
+
         f[self.c-1][self.c-1] = self.l + (self.c-1) * self.m + j * self.v
-        f[self.c-1][self.c-2] = -self.l
         f[self.c-1][self.c] = -self.c*self.m
+
+        f[self.c][0] = -j * self.v
 
         for i in xrange(1, self.c - 1):
             f[i][i] = self.l + i * self.m + j * self.v
-            f[i][i-1] = -self.l
-            f[i][i+1] = -(i+1) * self.m
+            f[i][i-1] = -1 * self.l
+            f[i][i+1] = -1 * (i+1) * self.m
             f[self.c][i] = -j * self.v
 
-        print "RESULT: ", f
         return f
 
     def get_b(self):
@@ -135,7 +164,7 @@ class MatrixParty(object):
         This function return W(j)
 
         """
-        result = inv(np.dot(self.get_f(j), self.get_b()))
+        result = inv(self.matrix_mult(self.get_f(j), self.get_b())).tolist()
         print "GET W CALLED. RESULT: ", result
         return result
 
@@ -143,30 +172,26 @@ class MatrixParty(object):
         """
         This return multiplyed matrices
         """
-        print "BIG W ", j, " ", r
         result = self.get_f(j)
         for k in xrange(j+1, r+1):
-            print "K: ", k
-            print "BEFORE:\n", result
-            result = np.dot(result, self.get_f(k))
-            print "AFTER:\n", result
-
+            f = self.get_f(k)
+            result = self.matrix_mult(result, f)
         return result
 
     def delta_j(self, j):
         print ">>>>>> DELTA J >>>>>>>>>>>"
         first_part = 1 / (factorial(j) * self.v**j)
         # D inversed
-        dmo = inv(self.get_d())
+        dmo = inv(self.get_d()).tolist()
         print dmo, type(dmo)
         # e with zero
         ewz = self.get_e(0)
         second_part_up = self.get_bigw(j, self.N-1)
-        second_part_up = np.dot(second_part_up, dmo)
-        second_part_up = np.dot(second_part_up, array(ewz))
+        second_part_up = self.matrix_mult(second_part_up, dmo)
+        second_part_up = self.vector_mult(second_part_up, array(ewz))
         print second_part_up, type(second_part_up)
-        second_part_down = np.dot(
-            np.dot(np.dot(ewz.T, self.get_bigw(0, self.N-1)), dmo), ewz)
+        second_part_down = self.vector_mult(
+            self.matrix_mult(self.matrix_mult(ewz, self.get_bigw(0, self.N-1)), dmo), ewz)
 
         return first_part * (second_part_up / second_part_down)
 
@@ -185,13 +210,21 @@ class MatrixParty(object):
         for j in xrange(1, self.N+1):
             result += (self.get_one() * self.delta_j(j))
 
-        return inv(result)
+        return inv(result).tolist()
 
 
 if __name__ == "__main__":
     m = MatrixParty()
+
     # print m.get_d()
-    print m.get_p()
+    # m1 = [[1, 4, 44, 1], [3, 5, 14, 51], [15, 31, 8, 4], [0, 2, 33, 6]]
+    # m2 = [[1, 4, 44, 1], [3, 5, 14, 51], [15, 31, 8, 4], [0, 2, 33, 6]]
+    # v = [5, 5, 5, 5]
+    # print m.vector_mult(m1, v)
+    # print m.get_bigw(0, 51)
+    for j in xrange(51):
+        print j
+        print m.get_f(j)
 
     # m1 = array([[0, -2147483648, 0, -2147483648, 0, 0],
     #             [0, -2147483648, 0, -2147483648, 0, 0],
@@ -209,7 +242,7 @@ if __name__ == "__main__":
     #             [0, -126, -126, -126, -130,   14]])
     # print m2.T
     #
-    # print np.dot(m1.T.tolist(), m2.T.tolist())
+    # print self.matrix_mult(m1.T.tolist(), m2.T.tolist())
 
     # print get_d(3, get_f(N))
     # print get_e(1, 5)
