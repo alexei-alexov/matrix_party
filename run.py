@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import sys
 from math import factorial
 
 import numpy as np
@@ -11,11 +12,18 @@ class MatrixParty(object):
 
     # PREDEFINED
     # v, m, l, c, N
-    c = 5
-    l = 4
-    m = 2
-    v = 3
-    N = 51
+    c = 2
+    l = 3
+    m = 1
+    v = 2
+    N = 2
+
+    def __init__(self, c, l, m, v, N):
+        self.c = int(c)
+        self.l = int(l)
+        self.m = int(m)
+        self.v = int(v)
+        self.N = int(N)
 
     def getElement(self, m1, m2, row, column):
         result = 0
@@ -54,6 +62,12 @@ class MatrixParty(object):
                 column_result += v[row] * m[row][column]
             result.append(column_result)
         return result
+
+    def vector_mult_number(self, m, n):
+        length = len(m)
+        for row in xrange(length):
+            m[row][0] *= n
+        return m
 
     def generate_array(self, size):
         """
@@ -108,8 +122,6 @@ class MatrixParty(object):
     def get_f(self, j):
         """
         This function return F(j)
-
-         - OK
         """
         # creating array filled with 0
         f = self.generate_array(self.c+1)
@@ -168,7 +180,6 @@ class MatrixParty(object):
     def get_w(self, j):
         """
         This function return W(j)
-
         """
         result = self.matrix_mult_matrix(inv(self.get_f(j)).tolist(), self.get_b())
         return result
@@ -184,35 +195,48 @@ class MatrixParty(object):
         return result
 
     def delta_j(self, j):
-        first_part = (factorial(j) * self.v**j)
+        # print "DELTA J[", j, "]"
+        first_part = 1.0 / (factorial(j) * self.v**j)
+        # print "FIRST PART: ", first_part
         # D inversed
         dmo = inv(self.get_d()).tolist()
+        # print "DMO: ", dmo
         # e with zero
         ewz = self.get_e(0)
+        # print "E0: ", ewz
         e_t = (array(self.get_e(0)).T).tolist()[0]
-        second_part_up = self.get_bigw(j, self.N-1)
-        second_part_up = self.matrix_mult_matrix(second_part_up, dmo)
-        second_part_up = self.matrix_mult_vector(second_part_up, ewz)
+        # print "E0t: ", e_t
+        if j == self.N:
+            second_part_up = self.matrix_mult_vector(dmo, ewz)
+            # print "J == N, UP PART: ", second_part_up
+        else:
+            second_part_up = self.get_bigw(j, self.N-1)
+            second_part_up = self.matrix_mult_matrix(second_part_up, dmo)
+            second_part_up = self.matrix_mult_vector(second_part_up, ewz)
+            # print "J != N, UP PART: ", second_part_up
+
         second_part_down = self.vector_mult_matrix(e_t, self.get_bigw(0, self.N-1))
         second_part_down = self.vector_mult_matrix(second_part_down, dmo)
+        # print "SECOND PART DOWN: ", second_part_down
         second_part_down_result = 0
         for i in xrange(len(ewz)):
             second_part_down_result += second_part_down[i] * ewz[i][0]
-        down = (first_part * second_part_down_result)
-        result = 0
-        for i in xrange(len(second_part_up)):
-            result += (second_part_up[i][0] / down)
-        return result
+        # print "SECOND PART DOWN RESULT: ", second_part_down_result
+        down = (first_part * (1 / second_part_down_result))
+        # print "DOWN: ", down
+        return self.vector_mult_number(second_part_up, down)
 
-    # def delta_n(self):
-    #     first_part = 1 / (factorial(self.N) * self.v**self.N)
-    #     # D inversed
-    #     dmo = inv(self.get_d())
-    #     # e with zero
-    #     ewz = self.get_e(0)
-    #     second_part_up = dmo * ewz
-    #     second_part_down = ewz.T * self.get_bigw(0, self.N-1) * dmo * ewz
-    #     return first_part * (second_part_up / second_part_down)
+    def pi_zero(self):
+        result = 0
+        for j in xrange(0, self.N+1):
+            delta_j = self.delta_j(j)
+            # print "J: ", j, " = ", delta_j
+            for i in xrange(len(delta_j)):
+                result += delta_j[i][0]
+        return 1 / result
+
+    def pi(self, j):
+        return self.vector_mult_number(self.delta_j(j), self.pi_zero())
 
     def get_p(self):
         result = self.delta_j(0)
@@ -221,40 +245,20 @@ class MatrixParty(object):
 
         return 1 / result
 
+    def get_big_pi(self):
+        result = []
+        for j in xrange(self.N+1):
+            result.append(str(self.pi(j)))
+        return "\n".join(result)
 
 if __name__ == "__main__":
-    m = MatrixParty()
-    print m.get_p()
-    # print m.get_d()
-    # v = [1, 2, 3]
-    # m1 = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
-    # print m.vector_mult_matrix(v, m1)
-    # print inv(m1).tolist()
-    # m2 = [[1, 4, 44, 1], [3, 5, 14, 51], [15, 31, 8, 4], [0, 2, 33, 6]]
-
-    # print m.matrix_mult_vector(m1, v)
-    # print m.get_bigw(0, 51)
-    # for j in xrange(51):
-    #     print j
-    #     print m.get_f(j)
-
-    # m1 = array([[0, -2147483648, 0, -2147483648, 0, 0],
-    #             [0, -2147483648, 0, -2147483648, 0, 0],
-    #             [0, -2147483648, 0, 0, 0, 0],
-    #             [0, -2147483648, 0,   0, 0, 0],
-    #             [-2147483648, -1073741824, 0, 1073741824, 0, 0],
-    #             [-2147483648, -1073741824, 0, 1073741824, 0, 0]])
-    # print m1.T
-    #
-    # m2 = array([[130, -2, 0, 0, 0, 0],
-    #             [-4, 132, -4, 0,    0,    0],
-    #             [0, -4,  134,   -6,    0,    0],
-    #             [0, 0,   -4,  136,   -8,    0],
-    #             [0, 0,    0,   -4,  138,  -10],
-    #             [0, -126, -126, -126, -130,   14]])
-    # print m2.T
-    #
-    # print self.matrix_mult_matrix(m1.T.tolist(), m2.T.tolist())
-
-    # print get_d(3, get_f(N))
-    # print get_e(1, 5)
+    if sys.argv[1] == "--help":
+        print "This is matrix party program."
+        print "ARGUMENTS: c l m v N"
+    else:
+        if len(sys.argv) != 6:
+            print "No enought arguments!"
+        else:
+            sys.argv.pop(0)
+            m = MatrixParty(*sys.argv)
+            print m.get_big_pi()
