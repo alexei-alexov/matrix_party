@@ -51,7 +51,6 @@ class MatrixParty(object):
         for column in xrange(length):
             column_result = 0
             for row in xrange(length):
-                print v[row], " * ", m[row][column]
                 column_result += v[row] * m[row][column]
             result.append(column_result)
         return result
@@ -185,30 +184,24 @@ class MatrixParty(object):
         return result
 
     def delta_j(self, j):
-        print ">>>>>> DELTA J >>>>>>>>>>>"
         first_part = (factorial(j) * self.v**j)
         # D inversed
         dmo = inv(self.get_d()).tolist()
-        print "D:\n", dmo
         # e with zero
         ewz = self.get_e(0)
         e_t = (array(self.get_e(0)).T).tolist()[0]
-        print "Et: ", e_t
         second_part_up = self.get_bigw(j, self.N-1)
         second_part_up = self.matrix_mult_matrix(second_part_up, dmo)
         second_part_up = self.matrix_mult_vector(second_part_up, ewz)
-        print "SECOND_PART_UP:\n", second_part_up
         second_part_down = self.vector_mult_matrix(e_t, self.get_bigw(0, self.N-1))
         second_part_down = self.vector_mult_matrix(second_part_down, dmo)
-        print "VECTOR_MULT_MATRIX(2): ", second_part_down
         second_part_down_result = 0
         for i in xrange(len(ewz)):
             second_part_down_result += second_part_down[i] * ewz[i][0]
-        print "SECOND_PART_DOWN:\n", second_part_down_result
         down = (first_part * second_part_down_result)
-        result = []
+        result = 0
         for i in xrange(len(second_part_up)):
-            result.append([second_part_up[i][0] / down])
+            result += (second_part_up[i][0] / down)
         return result
 
     # def delta_n(self):
@@ -222,16 +215,16 @@ class MatrixParty(object):
     #     return first_part * (second_part_up / second_part_down)
 
     def get_p(self):
-        result = self.get_one() * self.delta_j(1)
+        result = self.delta_j(0)
         for j in xrange(1, self.N+1):
-            result += (self.get_one() * self.delta_j(j))
+            result += self.delta_j(j)
 
-        return inv(result).tolist()
+        return 1 / result
 
 
 if __name__ == "__main__":
     m = MatrixParty()
-    print m.delta_j(1)
+    print m.get_p()
     # print m.get_d()
     # v = [1, 2, 3]
     # m1 = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
